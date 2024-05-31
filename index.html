@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Leitor de código NFC</title>
+    
+    <!-- Estilo da página -->
+    <style>
+        /*Fonte*/
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        /*Estilo do container*/
+        #nfc_mobile {
+            margin: 5px;
+            border: 2px solid black;
+            padding: 10px;
+            max-width: 850px;
+        }
+
+        /*Log de resultado*/
+        .mobileLog {
+            background-color: rgb(182, 182, 182);
+            font-family: "Consolas", monospace;
+            margin: 20px;
+            padding: 50px;
+            border-radius: 10px;
+            max-width: 650px;
+        }
+    </style>
+
+</head>
+
+<body>
+    <h1>Escaneando com NFC</h1>
+    <br />
+
+    <!-- Div container -->
+    <div id="nfc_mobile">
+        <p>Pressione o botão e aproxime o crachá ao celular para escaneá-lo...</p>
+        <!-- Botão de escanear -->
+        <button id="scanButton">Escanear</button>    
+        <!-- Log de resultado -->
+        <div class="mobileLog" id="mobileLog">
+            <p id="log">O resultado será mostrado aqui</p>
+        </div>
+    </div>
+
+    <script>
+
+        //Ligação das variáveis com elementos da página html
+        const log = document.getElementById('log');
+        const scanButton = document.getElementById('scanButton');
+        const block = "Seu sistema operacional não permite scan com NFC. Por favor, acesse o site por outro dispositivo.";
+        const confirmMsg = "Aproxime o cartão ao aparelho para que ele seja escaneado.";
+        const errorMsg = "Houve um erro na leitura do cartão. Tente novamente mais tarde.";
+
+        //Variável que recebe o código da tag NFC
+        var scanValue = null;
+        //Variável do leitor NFC:
+        var ndef = null;
+
+        //Checando se o sistema possui suporte à leitura NFC:
+        function check_nfc() {
+            return 'NDEFReader' in window;
+        }
+
+        //PROJETO FUTURO:
+        //Verificando localização do usuário
+        function check_geolocation() {
+            if ('geolocation' in navigator) {
+                return true
+            } else {
+                return false
+            }
+        }
+
+        
+        //Executando a função assim que a página for carregada:
+        window.onload = function () {
+            //Ligando o scanner quando o botão for pressionado:
+            scanButton.addEventListener("click", async () => {
+                
+                //Desligando o botão enquanto a leitura estiver ativa:
+                scanButton.disabled = true;
+
+                //Recebendo a confirmação (dispositivo suporta ou não NFC):
+                var checkNFC = check_nfc();
+
+                //Se suportar...
+                if (checkNFC) {
+
+                    //Faça o tratamento de erros...
+                    try {
+                        // Representando o scan por uma variável:
+                        ndef = new NDEFReader();
+                        // Realizando o scan
+                        await ndef.scan();
+                        //Mensagem indicando que a leitura está sendo feita:
+                        log.innerText = confirmMsg;
+
+                        // Caso erro na leitura:
+                        ndef.addEventListener("readingerror", () => {
+                            log.innerText = errorMsg;
+                        });
+
+                        //Após a leitura...
+                        ndef.addEventListener("reading", ({ serialNumber }) => {
+                            //Envie o serial do cartão para uma variável
+                            scanValue = serialNumber;
+
+                            //Se a variável tiver recebido algum parâmetro...
+                            if (!(scanValue == null)) {         
+                                
+                                //Informe o serial do cartão escaneado.               
+                                log.innerHTML = `O serial do cartão escaneado é: ${scanValue}<br>Scanner desligado.`;                        
+
+                                //Em seguida, desligue o scanner:
+                                ndef.abortScan();
+
+                                //Após isso, aguarde 5 segundos e recarregue a página.
+                                setTimeout(function() {
+                                    window.location.reload();
+                                }, 5000);
+                            }
+                        });
+
+                    //Em caso de erro nos dados informados...
+                    } catch (error) {
+                        //Informe o erro
+                        log.innerText = "Argh! " + error;
+                        //E deixe o botão habilitado
+                        scanButton.disabled = false;
+                    }
+                    //Caso a propriedade do scanner não esteja disponível no dispositivo...
+                } else {
+                    //Envie a mensagem de bloqueio
+                    log.innerText = block;
+                    //Mantenha o botão de scan habilitado.
+                    scanButton.disabled = false;            
+                }
+        });
+        }
+        
+    </script>
+</body>
+</html>
